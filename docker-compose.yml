@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  billing-service:
+    build: .
+    ports:
+      - "8001:8001"
+    environment:
+      - DB_DSN=postgresql+asyncpg://billing_user:billing_pass@postgres:5432/billing_db
+      - SERVICE_TOKEN=super-secret-dev
+      - RESET_CRON=0 0 * * *
+    depends_on:
+      - postgres
+    volumes:
+      - ./app:/app/app  # Для разработки
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=billing_db
+      - POSTGRES_USER=billing_user
+      - POSTGRES_PASSWORD=billing_pass
+    ports:
+      - "5456:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data: 
