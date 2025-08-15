@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     service_name: str = "billing-tariffication"
     service_version: str = "1.0.0"
     
+    # Kafka
+    kafka_bootstrap_servers: str = "kafka:29092"
+    
     class Config:
         env_file = ".env"
 
