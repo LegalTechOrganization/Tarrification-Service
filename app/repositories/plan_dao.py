@@ -11,12 +11,12 @@ class PlanDAO(BaseDAO[UserPlan]):
     def __init__(self):
         super().__init__(UserPlan)
     
-    async def get_active_plan_by_user(self, session: AsyncSession, user_id: str) -> Optional[UserPlan]:
+    async def get_active_plan_by_user(self, session: AsyncSession, sub: str) -> Optional[UserPlan]:
         """Получить активный план пользователя"""
         result = await session.execute(
             select(UserPlan).where(
                 and_(
-                    UserPlan.user_id == user_id,
+                    UserPlan.sub == sub,
                     UserPlan.is_active == True,
                     UserPlan.expires_at > datetime.utcnow()
                 )
@@ -36,11 +36,11 @@ class PlanDAO(BaseDAO[UserPlan]):
         )
         return result.scalar_one_or_none()
     
-    async def apply_plan(self, session: AsyncSession, user_id: str, plan_code: str, 
+    async def apply_plan(self, session: AsyncSession, sub: str, plan_code: str, 
                         ref: str, auto_renew: bool = False) -> UserPlan:
         """Применить план к пользователю"""
         # Деактивируем старые планы
-        await self.deactivate_user_plans(session, user_id)
+        await self.deactivate_user_plans(session, sub)
         
         # Получаем тарифный план
         tariff_plan = await self.get_tariff_plan(session, plan_code)
@@ -52,7 +52,7 @@ class PlanDAO(BaseDAO[UserPlan]):
         expires_at = now + timedelta(days=30)  # Месячный план
         
         user_plan = UserPlan(
-            user_id=user_id,
+            sub=sub,
             plan_code=plan_code,
             started_at=now,
             expires_at=expires_at,
@@ -62,12 +62,12 @@ class PlanDAO(BaseDAO[UserPlan]):
         
         return await self.create(session, user_plan)
     
-    async def deactivate_user_plans(self, session: AsyncSession, user_id: str) -> None:
+    async def deactivate_user_plans(self, session: AsyncSession, sub: str) -> None:
         """Деактивировать все планы пользователя"""
         await session.execute(
             UserPlan.__table__.update().where(
                 and_(
-                    UserPlan.user_id == user_id,
+                    UserPlan.sub == sub,
                     UserPlan.is_active == True
                 )
             ).values(is_active=False)

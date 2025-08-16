@@ -20,12 +20,12 @@ class PlanService:
         
         # Применяем план
         user_plan = await self.plan_dao.apply_plan(
-            session, request.user_id, request.plan_code, request.ref, request.auto_renew
+            session, request.sub, request.plan_code, request.ref, request.auto_renew
         )
         
         # Начисляем месячные единицы
         credit_request = CreditRequest(
-            user_id=request.user_id,
+            sub=request.sub,
             units=tariff_plan.monthly_units,
             ref=request.ref,
             source_service="plan_activation",
@@ -36,9 +36,9 @@ class PlanService:
         
         return user_plan.id, new_balance
     
-    async def get_user_plan_info(self, session: AsyncSession, user_id: str) -> Optional[dict]:
+    async def get_user_plan_info(self, session: AsyncSession, sub: str) -> Optional[dict]:
         """Получить информацию о плане пользователя"""
-        user_plan = await self.plan_dao.get_active_plan_by_user(session, user_id)
+        user_plan = await self.plan_dao.get_active_plan_by_user(session, sub)
         
         if not user_plan:
             return None

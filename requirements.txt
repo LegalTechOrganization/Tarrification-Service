@@ -12,3 +12,4 @@ aiokafka==0.10.0
 aiofiles==23.2.1
 psycopg2-binary
 alembic
+PyJWT

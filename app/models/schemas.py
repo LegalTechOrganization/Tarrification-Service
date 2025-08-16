@@ -11,7 +11,7 @@ class UserOrganization(BaseModel):
 
 class AuthUser(BaseModel):
     """Данные пользователя из Auth Service через Gateway"""
-    user_id: str = Field(..., description="ID пользователя")
+    sub: str = Field(..., description="Уникальный идентификатор пользователя из JWT токена")
     email: str = Field(..., description="Email пользователя")
     full_name: Optional[str] = Field(None, description="Полное имя пользователя")
     orgs: List[UserOrganization] = Field(default_factory=list, description="Организации пользователя")
@@ -52,24 +52,24 @@ class GatewayCreditRequest(BaseModel):
 
 # Internal Request schemas (для внутренней логики)
 class CheckBalanceRequest(BaseModel):
-    user_id: str = Field(..., description="ID пользователя")
+    sub: str = Field(..., description="Уникальный идентификатор пользователя из JWT токена")
     units: float = Field(..., gt=0, description="Количество единиц для проверки")
 
 class DebitRequest(BaseModel):
-    user_id: str = Field(..., description="ID пользователя")
+    sub: str = Field(..., description="Уникальный идентификатор пользователя из JWT токена")
     units: float = Field(..., gt=0, description="Количество единиц для списания")
     ref: str = Field(..., description="Внешний ID операции")
     reason: str = Field(..., description="Причина списания")
 
 class CreditRequest(BaseModel):
-    user_id: str = Field(..., description="ID пользователя")
+    sub: str = Field(..., description="Уникальный идентификатор пользователя из JWT токена")
     units: float = Field(..., gt=0, description="Количество единиц для пополнения")
     ref: str = Field(..., description="Внешний ID операции")
     source_service: Optional[str] = Field(None, description="Сервис-источник")
     reason: str = Field(..., description="Причина пополнения")
 
 class ApplyPlanRequest(BaseModel):
-    user_id: str = Field(..., description="ID пользователя")
+    sub: str = Field(..., description="Уникальный идентификатор пользователя из JWT токена")
     plan_code: str = Field(..., description="Код тарифного плана")
     ref: Optional[str] = Field(None, description="ID платежа/заказа")
     auto_renew: bool = Field(False, description="Автопродление")
@@ -85,6 +85,11 @@ class GatewayApplyPlanRequest(BaseModel):
 class GatewayGetBalanceRequest(BaseModel):
     # Контекст аутентификации от Gateway
     auth_context: GatewayAuthContext = Field(..., description="Данные пользователя от Auth Service")
+
+class GatewayInitUserRequest(BaseModel):
+    """Запрос на инициализацию пользователя"""
+    # Пустая модель, так как все данные извлекаются из JWT токена в заголовке
+    pass
 
 # Response schemas
 class CheckBalanceResponse(BaseModel):
@@ -107,6 +112,14 @@ class ApplyPlanResponse(BaseModel):
     plan_id: str = Field(..., description="ID плана")
     new_balance: float = Field(..., description="Новый баланс")
 
+class InitUserResponse(BaseModel):
+    """Ответ на инициализацию пользователя"""
+    success: bool = Field(..., description="Успешность инициализации")
+    user_id: str = Field(..., description="Уникальный идентификатор пользователя (sub)")
+    balance_created: bool = Field(..., description="Создан ли баланс")
+    initial_balance: float = Field(..., description="Начальный баланс")
+    message: str = Field(..., description="Сообщение о результате")
+
 class ErrorResponse(BaseModel):
     code: str = Field(..., description="Код ошибки")
     detail: str = Field(..., description="Описание ошибки")
@@ -121,7 +134,7 @@ class QuotaCheckResponse(BaseModel):
     remain: float = Field(..., description="Оставшийся баланс")
 
 class QuotaDebitRequest(BaseModel):
-    user_id: str = Field(..., description="ID пользователя")
+    sub: str = Field(..., description="Уникальный идентификатор пользователя из JWT токена")
     action: str = Field(..., description="Тип действия")
     units: float = Field(..., gt=0, description="Количество единиц для списания")
     ref: Optional[str] = Field(None, description="Внешний ID операции")
@@ -130,7 +143,7 @@ class QuotaDebitResponse(BaseModel):
     remain: float = Field(..., description="Оставшийся баланс")
 
 class QuotaCreditRequest(BaseModel):
-    user_id: str = Field(..., description="ID пользователя")
+    sub: str = Field(..., description="Уникальный идентификатор пользователя из JWT токена")
     action: str = Field(..., description="Тип действия")
     units: float = Field(..., gt=0, description="Количество единиц для пополнения")
     ref: Optional[str] = Field(None, description="Внешний ID операции")
@@ -141,7 +154,7 @@ class QuotaCreditResponse(BaseModel):
 # Payment schemas (для интеграции с ЮKassa через Pay-Service)
 class PaymentWebhookRequest(BaseModel):
     payment_id: str = Field(..., description="ID платежа в ЮKassa")
-    user_id: str = Field(..., description="ID пользователя")
+    sub: str = Field(..., description="Уникальный идентификатор пользователя из JWT токена")
     amount: float = Field(..., gt=0, description="Сумма платежа")
     currency: str = Field(default="RUB", description="Валюта платежа")
     payment_status: str = Field(..., description="Статус платежа (succeeded, pending, canceled)")
@@ -157,7 +170,7 @@ class PaymentWebhookResponse(BaseModel):
     message: str = Field(..., description="Сообщение о результате")
 
 class CreatePaymentRequest(BaseModel):
-    user_id: str = Field(..., description="ID пользователя")
+    sub: str = Field(..., description="Уникальный идентификатор пользователя из JWT токена")
     amount: float = Field(..., gt=0, description="Сумма платежа")
     currency: str = Field(default="RUB", description="Валюта платежа")
     plan_code: Optional[str] = Field(None, description="Код тарифного плана")

@@ -12,7 +12,7 @@ class UserBalance(Base):
     __tablename__ = "user_balances"
     
     id = Column(String, primary_key=True, default=generate_uuid)
-    user_id = Column(String, nullable=False, unique=True, index=True)
+    sub = Column(String, nullable=False, unique=True, index=True)
     balance_units = Column(Float, nullable=False, default=0.0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -22,7 +22,7 @@ class BalanceTransaction(Base):
     __tablename__ = "balance_transactions"
     
     id = Column(String, primary_key=True, default=generate_uuid)
-    user_id = Column(String, nullable=False, index=True)
+    sub = Column(String, nullable=False, index=True)
     direction = Column(String, nullable=False)  # 'debit' или 'credit'
     units = Column(Float, nullable=False)
     ref = Column(String, nullable=False)  # Внешний ID операции
@@ -31,7 +31,7 @@ class BalanceTransaction(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     __table_args__ = (
-        UniqueConstraint('user_id', 'ref', 'direction', name='uq_transaction_idempotency'),
+        UniqueConstraint('sub', 'ref', 'direction', name='uq_transaction_idempotency'),
     )
 
 class TariffPlan(Base):
@@ -51,7 +51,7 @@ class UserPlan(Base):
     __tablename__ = "user_plans"
     
     id = Column(String, primary_key=True, default=generate_uuid)
-    user_id = Column(String, nullable=False, index=True)
+    sub = Column(String, nullable=False, index=True)
     plan_code = Column(String, nullable=False)
     started_at = Column(DateTime(timezone=True), nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
@@ -60,5 +60,5 @@ class UserPlan(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     __table_args__ = (
-        UniqueConstraint('user_id', 'plan_code', name='uq_user_plan'),
+        UniqueConstraint('sub', 'plan_code', name='uq_user_plan'),
     ) 

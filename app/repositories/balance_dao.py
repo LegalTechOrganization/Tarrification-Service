@@ -10,33 +10,33 @@ class BalanceDAO(BaseDAO[UserBalance]):
     def __init__(self):
         super().__init__(UserBalance)
     
-    async def get_by_user_id(self, session: AsyncSession, user_id: str) -> Optional[UserBalance]:
-        """Получить баланс пользователя"""
+    async def get_by_sub(self, session: AsyncSession, sub: str) -> Optional[UserBalance]:
+        """Получить баланс пользователя по sub"""
         result = await session.execute(
-            select(UserBalance).where(UserBalance.user_id == user_id)
+            select(UserBalance).where(UserBalance.sub == sub)
         )
         return result.scalar_one_or_none()
     
-    async def get_or_create_balance(self, session: AsyncSession, user_id: str) -> UserBalance:
+    async def get_or_create_balance(self, session: AsyncSession, sub: str) -> UserBalance:
         """Получить или создать баланс пользователя"""
-        balance = await self.get_by_user_id(session, user_id)
+        balance = await self.get_by_sub(session, sub)
         
         if not balance:
             balance = UserBalance(
-                user_id=user_id,
+                sub=sub,
                 balance_units=0.0
             )
             balance = await self.create(session, balance)
         
         return balance
     
-    async def update_balance(self, session: AsyncSession, user_id: str, new_balance: float) -> UserBalance:
+    async def update_balance(self, session: AsyncSession, sub: str, new_balance: float) -> UserBalance:
         """Обновить баланс пользователя"""
         await session.execute(
             UserBalance.__table__.update().where(
-                UserBalance.user_id == user_id
+                UserBalance.sub == sub
             ).values(balance_units=new_balance)
         )
         await session.commit()
         
-        return await self.get_by_user_id(session, user_id) 
+        return await self.get_by_sub(session, sub) 

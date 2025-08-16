@@ -10,13 +10,13 @@ class TransactionDAO(BaseDAO[BalanceTransaction]):
     def __init__(self):
         super().__init__(BalanceTransaction)
     
-    async def get_by_ref_and_direction(self, session: AsyncSession, user_id: str, 
+    async def get_by_ref_and_direction(self, session: AsyncSession, sub: str, 
                                       ref: str, direction: str) -> Optional[BalanceTransaction]:
         """Получить транзакцию по ref и direction (для идемпотентности)"""
         result = await session.execute(
             select(BalanceTransaction).where(
                 and_(
-                    BalanceTransaction.user_id == user_id,
+                    BalanceTransaction.sub == sub,
                     BalanceTransaction.ref == ref,
                     BalanceTransaction.direction == direction
                 )
@@ -24,12 +24,12 @@ class TransactionDAO(BaseDAO[BalanceTransaction]):
         )
         return result.scalar_one_or_none()
     
-    async def create_transaction(self, session: AsyncSession, user_id: str, direction: str,
+    async def create_transaction(self, session: AsyncSession, sub: str, direction: str,
                                units: float, ref: str, reason: str, 
                                source_service: str = None) -> BalanceTransaction:
         """Создать новую транзакцию"""
         transaction = BalanceTransaction(
-            user_id=user_id,
+            sub=sub,
             direction=direction,
             units=units,
             ref=ref,

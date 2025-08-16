@@ -14,22 +14,22 @@ class BalanceService:
     
     async def check_balance(self, session: AsyncSession, request: CheckBalanceRequest) -> Tuple[bool, float]:
         """Проверить достаточно ли средств"""
-        balance = await self.balance_dao.get_or_create_balance(session, request.user_id)
+        balance = await self.balance_dao.get_or_create_balance(session, request.sub)
         return balance.balance_units >= request.units, balance.balance_units
     
     async def debit_balance(self, session: AsyncSession, request: DebitRequest) -> Tuple[float, str]:
         """Списать средства с баланса"""
         # Проверяем идемпотентность
         existing_tx = await self.transaction_dao.get_by_ref_and_direction(
-            session, request.user_id, request.ref, "debit"
+            session, request.sub, request.ref, "debit"
         )
         if existing_tx:
             # Возвращаем существующую транзакцию
-            balance = await self.balance_dao.get_by_user_id(session, request.user_id)
+            balance = await self.balance_dao.get_by_sub(session, request.sub)
             return balance.balance_units, existing_tx.id
         
         # Получаем баланс с блокировкой
-        balance = await self.balance_dao.get_or_create_balance(session, request.user_id)
+        balance = await self.balance_dao.get_or_create_balance(session, request.sub)
         
         # Проверяем достаточно ли средств
         if balance.balance_units < request.units:
@@ -43,12 +43,12 @@ class BalanceService:
         
         # Списываем средства
         new_balance = balance.balance_units - request.units
-        await self.balance_dao.update_balance(session, request.user_id, new_balance)
+        await self.balance_dao.update_balance(session, request.sub, new_balance)
         
         # Создаем транзакцию
         transaction = await self.transaction_dao.create_transaction(
             session=session,
-            user_id=request.user_id,
+            sub=request.sub,
             direction="debit",
             units=request.units,
             ref=request.ref,
@@ -61,24 +61,24 @@ class BalanceService:
         """Пополнить баланс"""
         # Проверяем идемпотентность
         existing_tx = await self.transaction_dao.get_by_ref_and_direction(
-            session, request.user_id, request.ref, "credit"
+            session, request.sub, request.ref, "credit"
         )
         if existing_tx:
             # Возвращаем существующую транзакцию
-            balance = await self.balance_dao.get_by_user_id(session, request.user_id)
+            balance = await self.balance_dao.get_by_sub(session, request.sub)
             return balance.balance_units, existing_tx.id
         
         # Получаем или создаем баланс
-        balance = await self.balance_dao.get_or_create_balance(session, request.user_id)
+        balance = await self.balance_dao.get_or_create_balance(session, request.sub)
         
         # Пополняем баланс
         new_balance = balance.balance_units + request.units
-        await self.balance_dao.update_balance(session, request.user_id, new_balance)
+        await self.balance_dao.update_balance(session, request.sub, new_balance)
         
         # Создаем транзакцию
         transaction = await self.transaction_dao.create_transaction(
             session=session,
-            user_id=request.user_id,
+            sub=request.sub,
             direction="credit",
             units=request.units,
             ref=request.ref,
@@ -88,7 +88,7 @@ class BalanceService:
         
         return new_balance, transaction.id
     
-    async def get_balance(self, session: AsyncSession, user_id: str) -> float:
+    async def get_balance(self, session: AsyncSession, sub: str) -> float:
         """Получить текущий баланс пользователя"""
-        balance = await self.balance_dao.get_or_create_balance(session, user_id)
+        balance = await self.balance_dao.get_or_create_balance(session, sub)
         return balance.balance_units 
