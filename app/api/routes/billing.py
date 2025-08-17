@@ -16,11 +16,13 @@ from uuid import uuid4
 
 router = APIRouter(prefix="/internal/billing", tags=["billing"])
 
+
 # Упрощенная функция для получения sub из JWT токена
 async def get_user_sub(auth_context: GatewayAuthContext = Depends(verify_gateway_auth)) -> str:
     """Получить sub пользователя из JWT токена"""
     user = await get_user_from_context(auth_context)
     return user.sub
+
 
 @router.post("/check", response_model=CheckBalanceResponse)
 async def check_balance(
@@ -39,6 +41,7 @@ async def check_balance(
     allowed, balance = await balance_service.check_balance(session, internal_request)
     
     return CheckBalanceResponse(allowed=allowed, balance=balance)
+
 
 @router.post("/debit", response_model=DebitResponse)
 async def debit_balance(
@@ -60,6 +63,7 @@ async def debit_balance(
     new_balance, tx_id = await balance_service.debit_balance(session, internal_request)
     
     return DebitResponse(balance=new_balance, tx_id=tx_id)
+
 
 @router.post("/credit", response_model=CreditResponse)
 async def credit_balance(
@@ -83,8 +87,10 @@ async def credit_balance(
     
     return CreditResponse(balance=new_balance, tx_id=tx_id)
 
+
 @router.post("/balance", response_model=BalanceResponse)
 async def get_balance(
+    request: GatewayGetBalanceRequest,
     session: AsyncSession = Depends(get_db),
     sub: str = Depends(get_user_sub)
 ):
@@ -105,29 +111,6 @@ async def get_balance(
     
     return BalanceResponse(balance=balance, plan=plan_info)
 
-# Legacy endpoint для обратной совместимости
-@router.get("/balance", response_model=BalanceResponse)
-async def get_balance_legacy(
-    user_id: str = Query(..., description="ID пользователя"),
-    session: AsyncSession = Depends(get_db),
-    _: str = Depends(verify_internal_key)
-):
-    """Получить баланс пользователя (legacy endpoint)"""
-    balance_service = BalanceService()
-    plan_service = PlanService()
-    
-    balance = await balance_service.get_balance(session, user_id)
-    plan_info = await plan_service.get_user_plan_info(session, user_id)
-    
-    # Если план не найден, создаем пустой план
-    if plan_info is None:
-        plan_info = {
-            "plan_code": "none",
-            "status": "inactive",
-            "expires_at": None
-        }
-    
-    return BalanceResponse(balance=balance, plan=plan_info)
 
 @router.post("/user/init", response_model=InitUserResponse)
 async def init_user(
@@ -151,6 +134,7 @@ async def init_user(
         message=message
     )
 
+
 @router.get("/user/status")
 async def get_user_status(
     session: AsyncSession = Depends(get_db),
@@ -160,6 +144,7 @@ async def get_user_status(
     user_init_service = UserInitService()
     status = await user_init_service.get_user_status(session, sub)
     return status
+
 
 @router.post("/plan/apply", response_model=ApplyPlanResponse)
 async def apply_plan(
@@ -181,6 +166,7 @@ async def apply_plan(
     plan_id, new_balance = await plan_service.apply_plan(session, internal_request)
     
     return ApplyPlanResponse(plan_id=plan_id, new_balance=new_balance)
+
 
 @router.post("/payment/webhook", response_model=PaymentWebhookResponse)
 async def payment_webhook(
@@ -231,6 +217,7 @@ async def payment_webhook(
             tx_id=tx_id,
             message="Balance credited successfully"
         )
+
 
 @router.post("/payment/create", response_model=CreatePaymentResponse)
 async def create_payment(

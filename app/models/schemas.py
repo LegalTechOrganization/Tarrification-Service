@@ -26,10 +26,7 @@ class GatewayAuthContext(BaseModel):
 # Gateway Request schemas (для внешних запросов от Gateway)
 class GatewayCheckBalanceRequest(BaseModel):
     # Данные операции
-    action: str = Field(..., description="Тип действия")
     units: float = Field(..., gt=0, description="Количество единиц для проверки")
-    # Контекст аутентификации от Gateway
-    auth_context: GatewayAuthContext = Field(..., description="Данные пользователя от Auth Service")
 
 class GatewayDebitRequest(BaseModel):
     # Данные операции  
@@ -37,8 +34,6 @@ class GatewayDebitRequest(BaseModel):
     units: float = Field(..., gt=0, description="Количество единиц для списания")
     ref: Optional[str] = Field(None, description="Внешний ID операции")
     reason: str = Field(..., description="Причина списания")
-    # Контекст аутентификации от Gateway
-    auth_context: GatewayAuthContext = Field(..., description="Данные пользователя от Auth Service")
 
 class GatewayCreditRequest(BaseModel):
     # Данные операции
@@ -47,8 +42,6 @@ class GatewayCreditRequest(BaseModel):
     ref: Optional[str] = Field(None, description="Внешний ID операции")
     source_service: Optional[str] = Field(None, description="Сервис-источник")
     reason: str = Field(..., description="Причина пополнения")
-    # Контекст аутентификации от Gateway
-    auth_context: GatewayAuthContext = Field(..., description="Данные пользователя от Auth Service")
 
 # Internal Request schemas (для внутренней логики)
 class CheckBalanceRequest(BaseModel):
@@ -79,12 +72,10 @@ class GatewayApplyPlanRequest(BaseModel):
     plan_code: str = Field(..., description="Код тарифного плана")
     ref: Optional[str] = Field(None, description="ID платежа/заказа")
     auto_renew: bool = Field(False, description="Автопродление")
-    # Контекст аутентификации от Gateway
-    auth_context: GatewayAuthContext = Field(..., description="Данные пользователя от Auth Service")
 
 class GatewayGetBalanceRequest(BaseModel):
-    # Контекст аутентификации от Gateway
-    auth_context: GatewayAuthContext = Field(..., description="Данные пользователя от Auth Service")
+    # Пустая модель, так как все данные извлекаются из JWT токена в заголовке
+    pass
 
 class GatewayInitUserRequest(BaseModel):
     """Запрос на инициализацию пользователя"""

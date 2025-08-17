@@ -84,3 +84,5 @@ class UserInitService:
                 detail=f"Failed to get user status: {str(e)}"
             )
 
+
+
