@@ -1,7 +1,7 @@
 from typing import Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, join
-from app.models.database import UserPlan, TariffPlan
+from app.models.database import UserPlan, TariffPlan, UserBalance, TariffProperty
 from app.repositories.base_dao import BaseDAO
 from datetime import datetime, timedelta
 
@@ -75,7 +75,7 @@ class PlanDAO(BaseDAO[UserPlan]):
         await session.commit()
     
     async def get_user_subscription_details(self, session: AsyncSession, sub: str) -> Optional[Dict[str, Any]]:
-        """Получить детальную информацию о подписке пользователя с JOIN тарифного плана"""
+        """Получить детальную информацию о подписке пользователя с JOIN тарифного плана и балансом"""
         # Создаем JOIN между UserPlan и TariffPlan
         j = join(UserPlan, TariffPlan, UserPlan.plan_code == TariffPlan.plan_code)
         
@@ -107,6 +107,17 @@ class PlanDAO(BaseDAO[UserPlan]):
         if not row:
             return None
         
+        # Получаем баланс пользователя
+        balance_query = select(UserBalance.balance_units).where(UserBalance.sub == sub)
+        balance_result = await session.execute(balance_query)
+        balance_row = balance_result.scalar_one_or_none()
+        remaining_units = balance_row if balance_row is not None else 0.0
+        
+        # Получаем свойства тарифа для плана пользователя
+        tariff_properties_query = select(TariffProperty.plan_property).where(TariffProperty.plan_code == row.plan_code)
+        tariff_properties_result = await session.execute(tariff_properties_query)
+        tariff_properties = [prop.plan_property for prop in tariff_properties_result.scalars().all()]
+        
         # Определяем статус подписки
         now = datetime.utcnow()
         # Приводим к наивному datetime для сравнения
@@ -127,6 +138,9 @@ class PlanDAO(BaseDAO[UserPlan]):
             "auto_renew": row.auto_renew,
             "status": status,
             "created_at": row.created_at.isoformat() + "Z",
+            "remaining_units": remaining_units,
+            "next_debit": row.expires_at.isoformat() + "Z",
+            "tariff_properties": tariff_properties,
             "plan": {
                 "plan_code": row.plan_code,
                 "name": row.name,

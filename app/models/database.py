@@ -61,4 +61,13 @@ class UserPlan(Base):
     
     __table_args__ = (
         UniqueConstraint('sub', 'plan_code', name='uq_user_plan'),
-    ) 
+    )
+
+class TariffProperty(Base):
+    """Свойства тарифов"""
+    __tablename__ = "tariff_properties"
+    
+    id = Column(String, primary_key=True, default=generate_uuid)
+    plan_code = Column(String, nullable=False, index=True)
+    plan_property = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now()) 

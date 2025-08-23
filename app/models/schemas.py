@@ -230,6 +230,11 @@ class UserSubscriptionResponse(BaseModel):
     status: str = Field(..., description="Статус подписки (active/expired/cancelled)")
     created_at: str = Field(..., description="Дата создания записи")
     
+    # Дополнительные данные
+    remaining_units: float = Field(..., description="Остаток юнитов из UserBalance")
+    next_debit: str = Field(..., description="Дата следующего списания (expires_at)")
+    tariff_properties: List[str] = Field(..., description="Свойства тарифа из tariff_properties")
+    
     # JOIN данные с тарифным планом
     plan: Optional[TariffPlanInfo] = Field(None, description="Информация о тарифном плане")
 
