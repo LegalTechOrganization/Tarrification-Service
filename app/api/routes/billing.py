@@ -8,7 +8,7 @@ from app.models.schemas import (
     GatewayCheckBalanceRequest, GatewayDebitRequest, GatewayCreditRequest, GatewayApplyPlanRequest, GatewayGetBalanceRequest,
     ApplyPlanRequest, CheckBalanceResponse, DebitResponse, CreditResponse, BalanceResponse, 
     ApplyPlanResponse, InitUserResponse, ErrorResponse, PaymentWebhookRequest, PaymentWebhookResponse, 
-    CreatePaymentRequest, CreatePaymentResponse, GatewayAuthContext
+    CreatePaymentRequest, CreatePaymentResponse, UserSubscriptionResponse, GatewayAuthContext
 )
 from app.middleware.auth_middleware import verify_gateway_auth, verify_internal_key, get_user_from_context
 from app.config import settings
@@ -166,6 +166,26 @@ async def apply_plan(
     plan_id, new_balance = await plan_service.apply_plan(session, internal_request)
     
     return ApplyPlanResponse(plan_id=plan_id, new_balance=new_balance)
+
+
+@router.get("/subscription", response_model=UserSubscriptionResponse)
+async def get_user_subscription(
+    session: AsyncSession = Depends(get_db),
+    sub: str = Depends(get_user_sub)
+):
+    """Получить детальную информацию о подписке пользователя"""
+    from app.repositories.plan_dao import PlanDAO
+    
+    plan_dao = PlanDAO()
+    subscription_data = await plan_dao.get_user_subscription_details(session, sub)
+    
+    if not subscription_data:
+        raise HTTPException(
+            status_code=404,
+            detail="Active subscription not found"
+        )
+    
+    return UserSubscriptionResponse(**subscription_data)
 
 
 @router.post("/payment/webhook", response_model=PaymentWebhookResponse)

@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, join
 from app.models.database import UserPlan, TariffPlan
 from app.repositories.base_dao import BaseDAO
 from datetime import datetime, timedelta
@@ -72,4 +72,67 @@ class PlanDAO(BaseDAO[UserPlan]):
                 )
             ).values(is_active=False)
         )
-        await session.commit() 
+        await session.commit()
+    
+    async def get_user_subscription_details(self, session: AsyncSession, sub: str) -> Optional[Dict[str, Any]]:
+        """Получить детальную информацию о подписке пользователя с JOIN тарифного плана"""
+        # Создаем JOIN между UserPlan и TariffPlan
+        j = join(UserPlan, TariffPlan, UserPlan.plan_code == TariffPlan.plan_code)
+        
+        # Выбираем все нужные поля
+        query = select(
+            UserPlan.id,
+            UserPlan.sub.label('user_id'),
+            UserPlan.plan_code,
+            UserPlan.started_at,
+            UserPlan.expires_at,
+            UserPlan.auto_renew,
+            UserPlan.created_at,
+            TariffPlan.name,
+            TariffPlan.monthly_units,
+            TariffPlan.price_rub,
+            TariffPlan.is_active.label('plan_is_active'),
+            TariffPlan.created_at.label('plan_created_at')
+        ).select_from(j).where(
+            and_(
+                UserPlan.sub == sub,
+                UserPlan.is_active == True,
+                UserPlan.expires_at > datetime.utcnow()
+            )
+        )
+        
+        result = await session.execute(query)
+        row = result.fetchone()
+        
+        if not row:
+            return None
+        
+        # Определяем статус подписки
+        now = datetime.utcnow()
+        # Приводим к наивному datetime для сравнения
+        expires_at_naive = row.expires_at.replace(tzinfo=None) if row.expires_at.tzinfo else row.expires_at
+        if expires_at_naive <= now:
+            status = "expired"
+        elif not row.auto_renew:
+            status = "cancelled"
+        else:
+            status = "active"
+        
+        return {
+            "id": str(row.id),
+            "user_id": row.user_id,
+            "plan_code": row.plan_code,
+            "started_at": row.started_at.isoformat() + "Z",
+            "expires_at": row.expires_at.isoformat() + "Z",
+            "auto_renew": row.auto_renew,
+            "status": status,
+            "created_at": row.created_at.isoformat() + "Z",
+            "plan": {
+                "plan_code": row.plan_code,
+                "name": row.name,
+                "monthly_units": row.monthly_units,
+                "price_rub": row.price_rub,
+                "is_active": row.plan_is_active,
+                "created_at": row.plan_created_at.isoformat() + "Z"
+            }
+        } 
