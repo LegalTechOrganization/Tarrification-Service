@@ -1,8 +1,9 @@
 from typing import Tuple
+from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.balance_dao import BalanceDAO
 from app.repositories.plan_dao import PlanDAO
-from app.models.database import UserBalance
+from app.models.database import UserBalance, UserPlan
 from fastapi import HTTPException
 
 class UserInitService:
@@ -41,10 +42,20 @@ class UserInitService:
             
             await self.balance_dao.create(session, new_balance)
             
-            # В будущем здесь можно добавить создание других дефолтных записей:
-            # - Дефолтный тарифный план
-            # - Настройки пользователя
-            # - Другие связанные записи
+            # Создаем дефолтный план пользователя
+            now = datetime.utcnow()
+            expires_at = now + timedelta(days=365)  # Текущая дата + год
+            
+            default_plan = UserPlan(
+                sub=sub,
+                plan_code="0000",  # Дефолтный план
+                started_at=now,
+                expires_at=expires_at,
+                auto_renew=True,
+                is_active=True
+            )
+            
+            await self.plan_dao.create(session, default_plan)
             
             return True, initial_balance
             
