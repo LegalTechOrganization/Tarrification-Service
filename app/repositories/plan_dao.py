@@ -116,7 +116,7 @@ class PlanDAO(BaseDAO[UserPlan]):
         # Получаем свойства тарифа для плана пользователя
         tariff_properties_query = select(TariffProperty.plan_property).where(TariffProperty.plan_code == row.plan_code)
         tariff_properties_result = await session.execute(tariff_properties_query)
-        tariff_properties = [prop.plan_property for prop in tariff_properties_result.scalars().all()]
+        tariff_properties = tariff_properties_result.scalars().all()
         
         # Определяем статус подписки
         now = datetime.utcnow()
